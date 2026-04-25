@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-main
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    networks:
+      - shared-infra-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio-main
+    restart: unless-stopped
+    env_file: .env
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - shared-infra-net
+
+  minio-create-bucket:
+    image: minio/mc
+    container_name: minio-create-bucket-main
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD &&
+      mc ls minio/mlflow || mc mb minio/mlflow
+      "
+    env_file: .env
+    restart: "no"
+    networks:
+      - shared-infra-net
+      
+
+#################
+# Volumes
+#################
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: F:\docker-images\volumes\pg_data
+
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: F:\docker-images\volumes\minio_data
+
+
+
+#################
+# Networking
+#################
+networks:
+  shared-infra-net:
+    name: shared-infra-net  # Forces the exact network name
+    driver: bridge
