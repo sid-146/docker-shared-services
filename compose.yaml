@@ -56,6 +56,51 @@ services:
       - shared-infra-net
       
 
+  litellm:
+    image: ghcr.io/berriai/litellm-database:main-stable
+    container_name: litellm-main
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${LITELLM_POSTGRES_USER}:${LITELLM_POSTGRES_PASSWORD}@postgres:5432/${LITELLM_POSTGRES_DB}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
+
+
+    # # ----  LangSmith Integration ----
+    # - LANGSMITH_API_KEY=${LANGSMITH_API_KEY} # Standard key name
+    # - LANGSMITH_PROJECT=${LANGSMITH_PROJECT} # Standard project name
+    # - LANGSMITH_TRACING=true                  # Required for tracing
+    # - LANGSMITH_BATCH_SIZE=1                 # Set to 1 to see traces instantly in dev
+    volumes:
+      - ./configs/litellm-config.yaml:/app/litellm-config.yaml
+    ports:
+      - "4000:4000" # Proxy accessible at http://localhost:4000
+    command: ["--config", "/app/litellm-config.yaml"]
+    depends_on:
+      - postgres
+      - ollama
+    networks:
+      - shared-infra-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-main
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # or 1, if you have multiple GPUs
+              capabilities: [gpu]
+    networks:
+      - shared-infra-net
+
 #################
 # Volumes
 #################
@@ -73,6 +118,14 @@ volumes:
       type: none
       o: bind
       device: F:\docker-images\volumes\minio_data
+
+  ollama_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: F:/docker-images/volumes/ollama_data
+
 
 
 
