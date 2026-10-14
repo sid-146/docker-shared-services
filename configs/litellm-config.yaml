@@ -1,17 +1,18 @@
 litellm_settings:
-  success_callback: ["langsmith"]
-  failure_callback: ["langsmith"]
-
+  # To enable automatic trace logging to Langfuse, set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY
+  # in your environment and uncomment the lines below:
+  # success_callback: ["langfuse"]
+  # failure_callback: ["langfuse"]
 
 model_list:
   - model_name: gemma2b
     litellm_params:
       model: ollama/gemma2:2b
       api_base: "http://ollama:11434"
-    tpm: 100000  # Local models don't really have limits, but helpful for routing
+    tpm: 100000
 
   - model_name: gemma4e4b
     litellm_params:
       model: ollama/gemma4:e4b
       api_base: "http://ollama:11434"
-    tpm: 100000  # Local models don't really have limits, but helpful for routing
+    tpm: 100000
