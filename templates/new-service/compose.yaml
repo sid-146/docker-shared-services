@@ -1,0 +1,24 @@
+services:
+  # Replace SERVICE_NAME with your new service identifier
+  SERVICE_NAME:
+    image: SERVICE_IMAGE:TAG
+    container_name: SERVICE_NAME-main
+    restart: unless-stopped
+    profiles: ["SERVICE_NAME", "all"]
+    # env_file: .env
+    # environment:
+    #   - KEY=VALUE
+    # ports:
+    #   - "HOST_PORT:CONTAINER_PORT"
+    volumes:
+      - SERVICE_NAME_data:/data
+    networks:
+      - shared-infra-net
+
+volumes:
+  SERVICE_NAME_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/SERVICE_NAME_data
