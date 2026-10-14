@@ -1,0 +1,47 @@
+groups:
+    - name: curio_api_alerts
+      rules:
+          - alert: CurioBackendDown
+            expr: up{job="curio-backend"} == 0
+            for: 30s
+            labels:
+                severity: critical
+            annotations:
+                summary: "Curio Backend instance is unreachable"
+                description: "Curio backend has been unreachable for more than 30 seconds."
+
+          - alert: CurioHigh5xxErrorRate
+            expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) or vector(0)) / (sum(rate(http_requests_total[5m])) > 0) > 0.01
+            for: 2m
+            labels:
+                severity: critical
+            annotations:
+                summary: "Curio API high 5xx error rate"
+                description: "More than 1% of total requests returned HTTP 5xx errors over the last 5 minutes."
+
+          - alert: CurioHighLatencyP95
+            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+            for: 3m
+            labels:
+                severity: warning
+            annotations:
+                summary: "Curio API p95 latency high (>500ms)"
+                description: "The 95th percentile request latency exceeded 500ms for more than 3 minutes."
+
+          - alert: CurioSlowDatabaseQueriesDetected
+            expr: increase(curio_db_slow_queries_total[5m]) > 5
+            for: 2m
+            labels:
+                severity: warning
+            annotations:
+                summary: "Spike in slow database queries"
+                description: "More than 5 queries exceeded the slow query threshold in the last 5 minutes."
+
+          - alert: CurioHighActiveDBConnections
+            expr: curio_db_pool_active_connections > 20
+            for: 2m
+            labels:
+                severity: warning
+            annotations:
+                summary: "Database connection pool near capacity"
+                description: "Active database pool connections exceeded threshold for more than 2 minutes."

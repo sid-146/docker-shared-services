@@ -1,0 +1,23 @@
+services:
+  dockge:
+    image: louislam/dockge:1
+    container_name: dockge-main
+    restart: unless-stopped
+    profiles: ["dockge", "tools", "all"]
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dockge_data:/app/data
+    environment:
+      - DOCKGE_STACKS_DIR=/stacks
+    networks:
+      - shared-infra-net
+
+volumes:
+  dockge_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/dockge_data

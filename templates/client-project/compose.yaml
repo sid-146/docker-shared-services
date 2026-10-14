@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: my-project-app
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    networks:
+      - default
+      - shared-infra-net
+
+networks:
+  shared-infra-net:
+    external: true

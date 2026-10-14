@@ -1,0 +1,21 @@
+{
+    "available_services": [
+        "postgres",
+        "litellm",
+        "ollama",
+        "minio",
+        "milvus",
+        "attu",
+        "langfuse",
+        "redis",
+        "prometheus",
+        "grafana"
+    ],
+    "projects": {
+        "doc-agent": ["postgres", "litellm", "ollama", "minio"],
+        "ml-research": ["postgres", "minio", "milvus", "attu", "langfuse"],
+        "curio": ["postgres", "prometheus", "grafana"],
+        "folioman": ["postgres"]
+    },
+    "active_projects": ["folioman"]
+}

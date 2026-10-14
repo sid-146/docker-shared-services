@@ -1,15 +1,25 @@
+name: local-shared-cloud
+
+# Plug-and-play service inclusions from catalog or custom services
+# Use `.\manage.ps1 add-service <name>` to enable new services automatically
+include:
+  - catalog/redis/compose.yaml
+  - catalog/curio/compose.yaml
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: postgres-main
     restart: unless-stopped
+    profiles: ["postgres", "core", "all"]
     env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./scripts/sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -18,32 +28,31 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - shared-infra-net
+      shared-infra-net:
+        aliases:
+          - postgres
+          - postgres-main
 
   litellm:
     image: ghcr.io/berriai/litellm-database:main-stable
     container_name: litellm-main
     restart: unless-stopped
+    profiles: ["litellm", "ai", "all"]
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${LITELLM_POSTGRES_USER}:${LITELLM_POSTGRES_PASSWORD}@postgres:5432/${LITELLM_POSTGRES_DB}
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
-
-
-    # # ----  LangSmith Integration ----
-    # - LANGSMITH_API_KEY=${LANGSMITH_API_KEY} # Standard key name
-    # - LANGSMITH_PROJECT=${LANGSMITH_PROJECT} # Standard project name
-    # - LANGSMITH_TRACING=true                  # Required for tracing
-    # - LANGSMITH_BATCH_SIZE=1                 # Set to 1 to see traces instantly in dev
     volumes:
       - ./configs/litellm-config.yaml:/app/litellm-config.yaml
     ports:
-      - "4000:4000" # Proxy accessible at http://localhost:4000
+      - "4000:4000"
     command: ["--config", "/app/litellm-config.yaml"]
     depends_on:
-      - postgres
-      - ollama
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
     networks:
       - shared-infra-net
 
@@ -51,6 +60,7 @@ services:
     image: ollama/ollama:latest
     container_name: ollama-main
     restart: unless-stopped
+    profiles: ["ollama", "ai", "all"]
     volumes:
       - ollama_data:/root/.ollama
     ports:
@@ -60,14 +70,15 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: all # or 1, if you have multiple GPUs
+              count: all
               capabilities: [gpu]
     networks:
       - shared-infra-net
-  
+
   milvus-etcd:
     container_name: milvus-etcd
     image: quay.io/coreos/etcd:v3.5.25
+    profiles: ["milvus", "vector", "all"]
     environment:
       - ETCD_AUTO_COMPACTION_MODE=revision
       - ETCD_AUTO_COMPACTION_RETENTION=1000
@@ -75,7 +86,7 @@ services:
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
       - milvus_etcd_data:/etcd
-    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 30s
@@ -84,12 +95,51 @@ services:
     networks:
       - shared-infra-net
 
+  minio:
+    container_name: minio-main
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    restart: unless-stopped
+    profiles: ["minio", "core", "all"]
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - minio_data:/data
+    command: minio server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - shared-infra-net
+
+  minio-create-bucket:
+    image: minio/mc
+    container_name: minio-create-bucket-main
+    profiles: ["minio", "core", "all"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./scripts/milvus/create-buckets.sh:/scripts/create-buckets.sh
+    entrypoint: ["/bin/sh", "/scripts/create-buckets.sh"]
+    env_file: .env
+    restart: "no"
+    networks:
+      - shared-infra-net
+
   milvus-standalone:
     container_name: milvus-main
     image: milvusdb/milvus:v2.6.15
+    profiles: ["milvus", "vector", "all"]
     command: ["milvus", "run", "standalone"]
     security_opt:
-    - seccomp:unconfined
+      - seccomp:unconfined
     environment:
       ETCD_ENDPOINTS: milvus-etcd:2379
       MINIO_ADDRESS: minio:9000
@@ -106,51 +156,20 @@ services:
       - "19530:19530"
       - "9091:9091"
     depends_on:
-      - "milvus-etcd"
-      - "minio"
-      - "minio-create-bucket"
-    networks:
-      - shared-infra-net
-
-  minio:
-    container_name: minio-main
-    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    ports:
-      - "9001:9001"
-      - "9000:9000"
-    volumes:
-      - minio_data:/data
-    command: minio server /minio_data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    networks:
-      - shared-infra-net
-
-
-  minio-create-bucket:
-    image: minio/mc
-    container_name: minio-create-bucket-main
-    depends_on:
+      milvus-etcd:
+        condition: service_healthy
       minio:
         condition: service_healthy
-    volumes:
-    - ./scripts/milvus/create-buckets.sh:/scripts/create-buckets.sh
-    entrypoint: ["/bin/sh", "/scripts/create-buckets.sh"]
-    env_file: .env
-    restart: "no"
+      minio-create-bucket:
+        condition: service_completed_successfully
     networks:
       - shared-infra-net
-      
 
   attu:
     container_name: attu-main
     image: zilliz/attu:v3.0.0-beta.1
+    restart: unless-stopped
+    profiles: ["attu", "vector", "all"]
     ports:
       - "3000:3000"
     environment:
@@ -158,10 +177,31 @@ services:
     volumes:
       - attu_data:/data
     depends_on:
-      - milvus-standalone
+      milvus-standalone:
+        condition: service_started
     networks:
       - shared-infra-net
 
+  langfuse:
+    image: ghcr.io/langfuse/langfuse:3
+    container_name: langfuse-main
+    restart: unless-stopped
+    profiles: ["langfuse", "observability", "all"]
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${LANGFUSE_POSTGRES_USER}:${LANGFUSE_POSTGRES_PASSWORD}@postgres:5432/${LANGFUSE_POSTGRES_DB}
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - SALT=${LANGFUSE_SALT}
+      - ENCRYPTION_KEY=${LANGFUSE_ENCRYPTION_KEY}
+      - TELEMETRY_ENABLED=false
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shared-infra-net
 
 volumes:
   postgres_data:
@@ -169,45 +209,44 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: F:\docker-images\volumes\pg_data
-  
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/pg_data
+
   ollama_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: F:/docker-images/volumes/ollama_data
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/ollama_data
 
   minio_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: F:\docker-images\volumes\minio_data
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/minio_data
 
   milvus_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: F:/docker-images/volumes/milvus_data
-  
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/milvus_data
+
   milvus_etcd_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: F:/docker-images/volumes/milvus_etcd_data
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/milvus_etcd_data
 
   attu_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: F:/docker-images/volumes/attu_data
-
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/attu_data
 
 networks:
   shared-infra-net:
-    name: shared-infra-net  # Forces the exact network name
+    name: shared-infra-net
     driver: bridge

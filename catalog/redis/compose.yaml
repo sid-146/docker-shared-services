@@ -1,0 +1,21 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-main
+    restart: unless-stopped
+    profiles: ["redis", "cache", "all"]
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - shared-infra-net
+
+volumes:
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/redis_data
