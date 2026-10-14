@@ -1,0 +1,257 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "collapsed": false,
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+            "id": 1,
+            "title": "API Liveness",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "up{job=\"curio-backend\"}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "mappings": [
+                        {
+                            "options": {
+                                "0": { "text": "DOWN", "color": "red" },
+                                "1": { "text": "HEALTHY", "color": "green" }
+                            },
+                            "type": "value"
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "red", "value": null },
+                            { "color": "green", "value": 1 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+            "id": 2,
+            "title": "Request Throughput (RPS)",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "sum(rate(http_requests_total[1m]))",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{ "color": "blue", "value": null }]
+                    }
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+            "id": 3,
+            "title": "p95 Latency",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ms",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 200 },
+                            { "color": "red", "value": 500 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+            "id": 4,
+            "title": "Active DB Pool Connections",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "curio_db_pool_active_connections",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 10 },
+                            { "color": "red", "value": 20 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+            "id": 5,
+            "title": "HTTP Requests by Status Code",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "sum(rate(http_requests_total[1m])) by (status)",
+                    "legendFormat": "HTTP {{status}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth"
+                    },
+                    "unit": "reqps"
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+            "id": 6,
+            "title": "Request Latency Percentiles",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+                    "legendFormat": "p50",
+                    "refId": "A"
+                },
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+                    "legendFormat": "p90",
+                    "refId": "B"
+                },
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+                    "legendFormat": "p95",
+                    "refId": "C"
+                },
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+                    "legendFormat": "p99",
+                    "refId": "D"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth"
+                    },
+                    "unit": "ms"
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+            "id": 7,
+            "title": "Curio Graph Traversal Latency (p95 by Depth)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "histogram_quantile(0.95, sum(rate(curio_graph_traversal_duration_seconds_bucket[5m])) by (le, depth)) * 1000",
+                    "legendFormat": "Depth {{depth}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth"
+                    },
+                    "unit": "ms"
+                }
+            }
+        },
+        {
+            "collapsed": false,
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+            "id": 8,
+            "title": "Database Queries & Slow Query Detection",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "sum(rate(curio_db_query_duration_seconds_count[1m]))",
+                    "legendFormat": "Query Rate (qps)",
+                    "refId": "A"
+                },
+                {
+                    "datasource": "Prometheus",
+                    "expr": "increase(curio_db_slow_queries_total[5m])",
+                    "legendFormat": "Slow Queries (>200ms)",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth"
+                    }
+                }
+            }
+        }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": ["curio", "fastapi", "knowledge-graph", "monitoring"],
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "timepicker": {
+        "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+    },
+    "timezone": "browser",
+    "title": "Curio API & Knowledge Graph Overview",
+    "uid": "curio-api-overview",
+    "version": 1
+}

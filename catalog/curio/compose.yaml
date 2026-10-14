@@ -1,0 +1,59 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: curio-prometheus
+    restart: unless-stopped
+    profiles: ["curio", "prometheus", "monitoring", "all"]
+    volumes:
+      - ./configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - curio_prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      shared-infra-net:
+        aliases:
+          - prometheus
+          - curio-prometheus
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: curio-grafana
+    restart: unless-stopped
+    profiles: ["curio", "grafana", "monitoring", "all"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - curio_grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3002}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      shared-infra-net:
+        aliases:
+          - grafana
+          - curio-grafana
+
+volumes:
+  curio_prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/curio_prometheus_data
+
+  curio_grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/curio_grafana_data

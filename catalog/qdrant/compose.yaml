@@ -1,0 +1,21 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-main
+    restart: unless-stopped
+    profiles: ["qdrant", "vector", "all"]
+    ports:
+      - "6333:6333" # REST API & Web Dashboard
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - shared-infra-net
+
+volumes:
+  qdrant_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/qdrant_data
