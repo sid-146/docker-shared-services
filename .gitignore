@@ -1,0 +1,16 @@
+# Environment files
+.env
+.env*.local
+!.env.example
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local volume mounts or scratch files
+volumes/
+*.log
+tmp/
+.env
