@@ -14,8 +14,7 @@ A self-hosted, modular **Local Private Cloud / Internal Developer Platform (IDP)
 | **MinIO (S3)**    | `http://minio:9000`       | `localhost:9000` (API) / `9001` (UI) | S3-compatible object storage with project buckets                                                         |
 | **LiteLLM Proxy** | `http://litellm:4000/v1`  | `localhost:4000/v1`                  | OpenAI-compatible gateway with model routing                                                              |
 | **Ollama**        | `http://ollama:11434`     | `localhost:11434`                    | Local GPU-accelerated model serving                                                                       |
-| **Milvus**        | `milvus-standalone:19530` | `localhost:19530`                    | High-performance vector database                                                                          |
-| **Attu**          | `attu:3000`               | `http://localhost:3000`              | Web UI for Milvus vector management                                                                       |
+| **Qdrant**        | `http://qdrant:6333`      | `localhost:6333` (API) / `6334` (gRPC) | Lightweight, ultra-fast vector search engine & web UI                                                   |
 | **Langfuse**      | `http://langfuse:3000`    | `http://localhost:3001`              | Open-source LLM observability & tracing                                                                   |
 | **Prometheus**    | `curio-prometheus:9090`   | `localhost:9090`                     | Time-series metrics collection                                                                            |
 | **Grafana**       | `curio-grafana:3000`      | `http://localhost:3002`              | Metrics visualization dashboard                                                                           |
@@ -30,8 +29,8 @@ You don't need to manually type service names or guess overlapping dependencies.
 ### How it works:
 
 - **Project A** needs 4 services: `[postgres, litellm, ollama, minio]`
-- **Project B** needs 5 services: `[postgres, minio, milvus, attu, langfuse]`
-- **Total running union:** Exactly **7 services**. When Project B stops, the 3 unused services automatically stop to save RAM and GPU resources!
+- **Project B** needs 4 services: `[postgres, minio, qdrant, langfuse]`
+- **Total running union:** Exactly **6 services**. When Project B stops, the 2 unused services automatically stop to save RAM and GPU resources!
 
 ### CLI Commands:
 
@@ -64,7 +63,7 @@ _(Bash / Linux / WSL users can also run `./manage.sh <command>`)_
 Adding new services to the cloud takes one command without editing monolithic compose files:
 
 ```powershell
-# Add a pre-configured service from the catalog (e.g., Redis, Qdrant, Dockge)
+# Add a pre-configured service from the catalog (e.g., Redis, Milvus, Dockge)
 .\manage.ps1 add-service redis
 ```
 
@@ -77,7 +76,7 @@ This command:
 ### Pre-built Service Catalog:
 
 - `redis` — In-memory caching, message queues, and pub/sub.
-- `qdrant` — Lightweight, ultra-fast vector search engine.
+- `milvus` — High-performance distributed vector database with Attu Web UI.
 - `dockge` — Web UI for viewing and managing Docker stacks.
 - `templates/new-service` — Boilerplate for authoring any custom service.
 
@@ -130,7 +129,7 @@ docker-shared-services/
 ├── configs/
 │   └── litellm-config.yaml       # LiteLLM routing & Langfuse callbacks
 ├── scripts/
-│   ├── milvus/create-buckets.sh  # Automatic MinIO bucket initializer
+│   ├── minio/create-buckets.sh   # Automatic MinIO bucket initializer
 │   └── sql/                      # PostgreSQL database bootstrap scripts
 │       ├── litellm-setup.sql
 │       ├── mlflow-setup.sql
@@ -139,7 +138,7 @@ docker-shared-services/
 │
 ├── catalog/                      # Plug-and-play service recipes
 │   ├── redis/
-│   ├── qdrant/
+│   ├── milvus/
 │   └── dockge/
 │
 └── templates/                    # Client project & custom service boilerplates

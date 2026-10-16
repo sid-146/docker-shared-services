@@ -28,7 +28,7 @@ $ComposePath = Join-Path $ScriptDir "compose.yaml"
 function Get-Registry {
     if (-not (Test-Path $RegistryPath)) {
         @{
-            available_services = @("postgres", "litellm", "ollama", "minio", "milvus", "attu", "langfuse")
+            available_services = @("postgres", "litellm", "ollama", "minio", "qdrant", "langfuse")
             projects = @{}
             active_projects = @()
         } | ConvertTo-Json -Depth 10 | Set-Content $RegistryPath
@@ -321,9 +321,10 @@ AWS_REGION=us-east-1
 OPENAI_BASE_URL=http://litellm:4000/v1
 OPENAI_API_KEY=some_random_master_key
 
-# --- Milvus Vector Database ---
-MILVUS_URI=http://milvus-standalone:19530
-MILVUS_DB=default
+# --- Qdrant Vector Database ---
+QDRANT_URL=http://qdrant:6333
+QDRANT_HOST=qdrant
+QDRANT_PORT=6333
 
 # --- Langfuse LLM Observability ---
 LANGFUSE_HOST=http://langfuse:3000
@@ -345,7 +346,7 @@ Commands:
   .\manage.ps1 list-projects                List all registered projects and dependencies
   .\manage.ps1 register-project -Name <n>   Register a new project with its service list
   .\manage.ps1 provision-project -Name <n>  Auto-generate isolated DB, MinIO bucket, and client .env
-  .\manage.ps1 add-service <name>           Add a pre-configured service from catalog (e.g. redis, qdrant)
+  .\manage.ps1 add-service <name>           Add a pre-configured service from catalog (e.g. redis, milvus)
   .\manage.ps1 sync                         Reconcile running containers with currently active projects
 "@
     }

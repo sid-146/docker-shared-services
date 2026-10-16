@@ -22,9 +22,7 @@ When running inside Docker on `shared-infra-net`, use the container hostnames:
 | **MinIO (S3 API)**        | `http://minio:9000`       | `http://localhost:9000`    |
 | **MinIO (Console)**       | -                         | `http://localhost:9001`    |
 | **LiteLLM (AI Gateway)**  | `http://litellm:4000/v1`  | `http://localhost:4000/v1` |
-| **Ollama (Local Models)** | `http://ollama:11434`     | `http://localhost:11434`   |
-| **Milvus (Vector DB)**    | `milvus-standalone:19530` | `localhost:19530`          |
-| **Attu (Milvus UI)**      | -                         | `http://localhost:3000`    |
+| **Qdrant (Vector DB)**    | `http://qdrant:6333`      | `localhost:6333`           |
 | **Langfuse (Tracing/UI)** | `http://langfuse:3000`    | `http://localhost:3001`    |
 
 ### 3. Provisioning Your Project
