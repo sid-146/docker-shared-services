@@ -1,0 +1,89 @@
+services:
+  milvus-etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.25
+    restart: unless-stopped
+    profiles: ["milvus", "vector", "all"]
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - milvus_etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - shared-infra-net
+
+  milvus-standalone:
+    container_name: milvus-main
+    image: milvusdb/milvus:v2.6.15
+    restart: unless-stopped
+    profiles: ["milvus", "vector", "all"]
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: milvus-etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MQ_TYPE: woodpecker
+    volumes:
+      - milvus_data:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      milvus-etcd:
+        condition: service_healthy
+    networks:
+      - shared-infra-net
+
+  attu:
+    container_name: attu-main
+    image: zilliz/attu:v3.0.0-beta.1
+    restart: unless-stopped
+    profiles: ["attu", "milvus", "vector", "all"]
+    ports:
+      - "3000:3000"
+    environment:
+      - MILVUS_ADDRESS=milvus-standalone:19530
+    volumes:
+      - attu_data:/data
+    depends_on:
+      milvus-standalone:
+        condition: service_started
+    networks:
+      - shared-infra-net
+
+volumes:
+  milvus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/milvus_data
+
+  milvus_etcd_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/milvus_etcd_data
+
+  attu_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VOLUMES_ROOT:-D:/docker-images/volumes}/attu_data

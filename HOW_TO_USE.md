@@ -12,7 +12,7 @@ A modular, local **Private Cloud / Internal Developer Platform (IDP)** designed 
 4. [Scenario 1: Daily Development & Dynamic Service Overlaps](#scenario-1-daily-development--dynamic-service-overlaps)
 5. [Scenario 2: Onboarding an Existing Project (e.g., Curio, Folioman)](#scenario-2-onboarding-an-existing-project)
 6. [Scenario 3: Creating a Brand New AI Agent Project (1-Click Provisioning)](#scenario-3-creating-a-brand-new-ai-agent-project)
-7. [Scenario 4: Adding a Service from the Pre-built Catalog (e.g., Redis, Qdrant)](#scenario-4-adding-a-service-from-the-pre-built-catalog)
+7. [Scenario 4: Adding a Service from the Pre-built Catalog (e.g., Redis, Milvus)](#scenario-4-adding-a-service-from-the-pre-built-catalog)
 8. [Scenario 5: Authoring a Brand New Custom Service](#scenario-5-authoring-a-brand-new-custom-service)
 9. [Scenario 6: Connecting from Host (IDE, Python venv, DBeaver) vs Docker](#scenario-6-connecting-from-host-vs-docker)
 10. [Scenario 7: Database Management, Backups & Restores](#scenario-7-database-management-backups--restores)
@@ -71,12 +71,13 @@ All orchestration is handled through `manage.ps1` (PowerShell on Windows) or `ma
 | **Ollama (LLMs)**      | `http://ollama:11434`                            | `http://localhost:11434`   | Local model inference (GPU-backed)  |
 | **MinIO (S3 API)**     | `http://minio:9000`                              | `http://localhost:9000`    | S3 API endpoint                     |
 | **MinIO Console**      | `http://minio:9001`                              | `http://localhost:9001`    | Web storage console                 |
-| **Milvus (Vector DB)** | `milvus-standalone:19530`                        | `localhost:19530`          | High-performance vector database    |
-| **Attu (Milvus UI)**   | `http://attu:3000`                               | `http://localhost:3000`    | Milvus web management interface     |
+| **Qdrant (Vector DB)** | `http://qdrant:6333`                             | `localhost:6333` (API) / `6334` (gRPC) | High-performance vector database & dashboard |
 | **Langfuse**           | `http://langfuse:3000`                           | `http://localhost:3001`    | LLM observability & prompt tracking |
 | **Prometheus**         | `http://curio-prometheus:9090`                   | `http://localhost:9090`    | Time-series metrics collection      |
 | **Grafana**            | `http://curio-grafana:3000`                      | `http://localhost:3002`    | Metrics visualization dashboards    |
 | **Redis** _(Catalog)_  | `redis:6379`                                     | `localhost:6379`           | In-memory key-value cache           |
+| **Milvus** _(Catalog)_ | `milvus-standalone:19530`                        | `localhost:19530`          | Distributed vector database         |
+| **Attu** _(Catalog)_   | `http://attu:3000`                               | `http://localhost:3000`    | Milvus web management interface     |
 
 ---
 
@@ -280,7 +281,7 @@ cd D:\GitHub_Clones\docker-shared-services
     S3_BUCKET=legal-agent
     OPENAI_BASE_URL=http://litellm:4000/v1
     OPENAI_API_KEY=some_random_master_key
-    MILVUS_URI=http://milvus-standalone:19530
+    QDRANT_URL=http://qdrant:6333
     LANGFUSE_HOST=http://langfuse:3000
     ```
 
@@ -299,13 +300,13 @@ In `docker-shared-services`:
 
 ```powershell
 .\manage.ps1 start-project legal-agent
-# Enter required services: postgres,litellm,ollama,minio,milvus,langfuse
+# Enter required services: postgres,litellm,ollama,minio,qdrant,langfuse
 ```
 
 Your code can now:
 
 - Query local Ollama models or external OpenAI models transparently via LiteLLM (`OPENAI_BASE_URL`).
-- Store document embeddings into Milvus vector DB (`MILVUS_URI`).
+- Store document embeddings into Qdrant vector DB (`QDRANT_URL`).
 - Store uploaded PDFs into MinIO S3 (`S3_ENDPOINT`).
 - Automatically trace all LLM prompts, latency, and cost in the Langfuse dashboard at `http://localhost:3001`.
 
@@ -313,7 +314,7 @@ Your code can now:
 
 ## Scenario 4: Adding a Service from the Pre-built Catalog
 
-The Shared Cloud includes pre-configured recipes in `catalog/` (such as Redis, Qdrant vector database, Dockge web UI).
+The Shared Cloud includes pre-configured recipes in `catalog/` (such as Redis, Milvus vector database, Dockge web UI).
 
 ### Example: Adding Redis
 

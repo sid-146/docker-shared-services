@@ -4,8 +4,7 @@
         "litellm",
         "ollama",
         "minio",
-        "milvus",
-        "attu",
+        "qdrant",
         "langfuse",
         "redis",
         "prometheus",
@@ -13,9 +12,9 @@
     ],
     "projects": {
         "doc-agent": ["postgres", "litellm", "ollama", "minio"],
-        "ml-research": ["postgres", "minio", "milvus", "attu", "langfuse"],
+        "ml-research": ["postgres", "minio", "qdrant", "langfuse"],
         "curio": ["postgres", "prometheus", "grafana"],
         "folioman": ["postgres"]
     },
-    "active_projects": ["folioman"]
+    "active_projects": []
 }
