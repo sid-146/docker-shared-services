@@ -26,7 +26,7 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "5432:5432"
+      - "0.0.0.0:5432:5432"
     networks:
       shared-infra-net:
         aliases:
@@ -46,8 +46,8 @@ services:
     volumes:
       - ./configs/litellm-config.yaml:/app/litellm-config.yaml
     ports:
-      - "4000:4000"
-    command: ["--config", "/app/litellm-config.yaml"]
+      - "0.0.0.0:4000:4000"
+    command: ["--config", "/app/litellm-config.yaml", "--host", "0.0.0.0", "--port", "4000"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,10 +61,13 @@ services:
     container_name: ollama-main
     restart: unless-stopped
     profiles: ["ollama", "ai", "all"]
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
     volumes:
       - ollama_data:/root/.ollama
     ports:
-      - "11434:11434"
+      - "0.0.0.0:11434:11434"
     deploy:
       resources:
         reservations:
@@ -85,11 +88,11 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
-      - "9001:9001"
-      - "9000:9000"
+      - "0.0.0.0:9001:9001"
+      - "0.0.0.0:9000:9000"
     volumes:
       - minio_data:/data
-    command: minio server /data --console-address ":9001"
+    command: minio server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -119,8 +122,8 @@ services:
     restart: unless-stopped
     profiles: ["qdrant", "vector", "all"]
     ports:
-      - "6333:6333" # REST API & Web Dashboard
-      - "6334:6334" # gRPC
+      - "0.0.0.0:6333:6333" # REST API & Web Dashboard
+      - "0.0.0.0:6334:6334" # gRPC
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -137,13 +140,13 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${LANGFUSE_POSTGRES_USER}:${LANGFUSE_POSTGRES_PASSWORD}@postgres:5432/${LANGFUSE_POSTGRES_DB}
-      - NEXTAUTH_URL=http://localhost:3001
+      - NEXTAUTH_URL=${LANGFUSE_NEXTAUTH_URL:-http://localhost:3001}
       - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
       - SALT=${LANGFUSE_SALT}
       - ENCRYPTION_KEY=${LANGFUSE_ENCRYPTION_KEY}
       - TELEMETRY_ENABLED=false
     ports:
-      - "3001:3000"
+      - "0.0.0.0:3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
