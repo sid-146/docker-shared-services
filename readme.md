@@ -3,22 +3,23 @@
 A self-hosted, modular **Local Private Cloud / Internal Developer Platform (IDP)** designed to power multiple AI agents, web applications, and data science projects on your local workstation with unified resource sharing and automated project isolation.
 
 > 📖 **Comprehensive Guide:** See [HOW_TO_USE.md](file:///d:/GitHub_Clones/docker-shared-services/HOW_TO_USE.md) for detailed scenarios (daily workflow, onboarding existing apps, 1-click AI agent provisioning, custom services, and backups).
+> 🤖 **For AI Coding Agents:** See [AGENTS.md](file:///d:/GitHub_Clones/docker-shared-services/AGENTS.md) for strict architectural rules, CLI commands, and integration protocols.
 
 ---
 
 ## 🌟 Built-in Shared Cloud Services
 
-| Service           | Internal Docker Host      | Local Host Port                      | Purpose                                                                                                   |
-| :---------------- | :------------------------ | :----------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| **PostgreSQL 16** | `postgres:5432`           | `localhost:5432`                     | Single unified relational DB with isolated databases & users (`curio_db`, `folioman`, `litellm_db`, etc.) |
-| **MinIO (S3)**    | `http://minio:9000`       | `localhost:9000` (API) / `9001` (UI) | S3-compatible object storage with project buckets                                                         |
-| **LiteLLM Proxy** | `http://litellm:4000/v1`  | `localhost:4000/v1`                  | OpenAI-compatible gateway with model routing                                                              |
-| **Ollama**        | `http://ollama:11434`     | `localhost:11434`                    | Local GPU-accelerated model serving                                                                       |
-| **Qdrant**        | `http://qdrant:6333`      | `localhost:6333` (API) / `6334` (gRPC) | Lightweight, ultra-fast vector search engine & web UI                                                   |
-| **Langfuse**      | `http://langfuse:3000`    | `http://localhost:3001`              | Open-source LLM observability & tracing                                                                   |
-| **Prometheus**    | `curio-prometheus:9090`   | `localhost:9090`                     | Time-series metrics collection                                                                            |
-| **Grafana**       | `curio-grafana:3000`      | `http://localhost:3002`              | Metrics visualization dashboard                                                                           |
-| **Redis**         | `redis:6379`              | `localhost:6379`                     | In-memory cache & message broker                                                                          |
+| Service           | Internal Docker Host      | Host Port (`0.0.0.0` / Wi-Fi)       | Purpose                                                                                                   |
+| :---------------- | :------------------------ | :---------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| **PostgreSQL 16** | `postgres:5432`           | `0.0.0.0:5432`                      | Single unified relational DB with isolated databases & users (`curio_db`, `folioman`, `litellm_db`, etc.) |
+| **MinIO (S3)**    | `http://minio:9000`       | `0.0.0.0:9000` (API) / `9001` (UI)  | S3-compatible object storage with project buckets                                                         |
+| **LiteLLM Proxy** | `http://litellm:4000/v1`  | `0.0.0.0:4000/v1`                   | OpenAI-compatible gateway with model routing                                                              |
+| **Ollama**        | `http://ollama:11434`     | `0.0.0.0:11434`                     | Local GPU-accelerated model serving (with Wi-Fi CORS allowed)                                             |
+| **Qdrant**        | `http://qdrant:6333`      | `0.0.0.0:6333` (API) / `6334` (gRPC)| Lightweight, ultra-fast vector search engine & web UI                                                   |
+| **Langfuse**      | `http://langfuse:3000`    | `0.0.0.0:3001`                      | Open-source LLM observability & tracing                                                                   |
+| **Prometheus**    | `curio-prometheus:9090`   | `0.0.0.0:9090`                      | Time-series metrics collection                                                                            |
+| **Grafana**       | `curio-grafana:3000`      | `0.0.0.0:3002`                      | Metrics visualization dashboard                                                                           |
+| **Redis**         | `redis:6379`              | `0.0.0.0:6379`                      | In-memory cache & message broker (protected mode disabled for LAN access)                                 |
 
 ---
 
