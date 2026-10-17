@@ -4,9 +4,9 @@ services:
     container_name: redis-main
     restart: unless-stopped
     profiles: ["redis", "cache", "all"]
-    command: redis-server --appendonly yes
+    command: redis-server --bind 0.0.0.0 --protected-mode no --appendonly yes
     ports:
-      - "6379:6379"
+      - "0.0.0.0:6379:6379"
     volumes:
       - redis_data:/data
     networks:

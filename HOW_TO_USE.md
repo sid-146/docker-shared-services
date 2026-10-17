@@ -64,20 +64,23 @@ All orchestration is handled through `manage.ps1` (PowerShell on Windows) or `ma
 
 ## 3. Service Endpoints & Port Map
 
-| Service                | Internal Docker Host (within `shared-infra-net`) | Localhost Host Port        | Web UI / Dashboard                  |
-| :--------------------- | :----------------------------------------------- | :------------------------- | :---------------------------------- |
-| **PostgreSQL 16**      | `postgres:5432`                                  | `localhost:5432`           | Use DBeaver / pgAdmin on port 5432  |
-| **LiteLLM Proxy**      | `http://litellm:4000/v1`                         | `http://localhost:4000/v1` | API Gateway with key routing        |
-| **Ollama (LLMs)**      | `http://ollama:11434`                            | `http://localhost:11434`   | Local model inference (GPU-backed)  |
-| **MinIO (S3 API)**     | `http://minio:9000`                              | `http://localhost:9000`    | S3 API endpoint                     |
-| **MinIO Console**      | `http://minio:9001`                              | `http://localhost:9001`    | Web storage console                 |
-| **Qdrant (Vector DB)** | `http://qdrant:6333`                             | `localhost:6333` (API) / `6334` (gRPC) | High-performance vector database & dashboard |
-| **Langfuse**           | `http://langfuse:3000`                           | `http://localhost:3001`    | LLM observability & prompt tracking |
-| **Prometheus**         | `http://curio-prometheus:9090`                   | `http://localhost:9090`    | Time-series metrics collection      |
-| **Grafana**            | `http://curio-grafana:3000`                      | `http://localhost:3002`    | Metrics visualization dashboards    |
-| **Redis** _(Catalog)_  | `redis:6379`                                     | `localhost:6379`           | In-memory key-value cache           |
-| **Milvus** _(Catalog)_ | `milvus-standalone:19530`                        | `localhost:19530`          | Distributed vector database         |
-| **Attu** _(Catalog)_   | `http://attu:3000`                               | `http://localhost:3000`    | Milvus web management interface     |
+| Service                | Internal Docker Host (within `shared-infra-net`) | Host Port (`0.0.0.0`)    | Web UI / Dashboard / Wi-Fi Access                |
+| :--------------------- | :----------------------------------------------- | :----------------------- | :----------------------------------------------- |
+| **PostgreSQL 16**      | `postgres:5432`                                  | `0.0.0.0:5432`           | Connect via `localhost:5432` or `<WIFI_IP>:5432` |
+| **LiteLLM Proxy**      | `http://litellm:4000/v1`                         | `0.0.0.0:4000`           | `http://<WIFI_IP>:4000/v1`                       |
+| **Ollama (LLMs)**      | `http://ollama:11434`                            | `0.0.0.0:11434`          | `http://<WIFI_IP>:11434` (CORS enabled)          |
+| **MinIO (S3 API)**     | `http://minio:9000`                              | `0.0.0.0:9000`           | `http://<WIFI_IP>:9000`                          |
+| **MinIO Console**      | `http://minio:9001`                              | `0.0.0.0:9001`           | `http://<WIFI_IP>:9001` (Web console)            |
+| **Qdrant (Vector DB)** | `http://qdrant:6333`                             | `0.0.0.0:6333` / `6334`  | `http://<WIFI_IP>:6333` (REST & Web Dashboard)   |
+| **Langfuse**           | `http://langfuse:3000`                           | `0.0.0.0:3001`           | `http://<WIFI_IP>:3001`                          |
+| **Prometheus**         | `http://curio-prometheus:9090`                   | `0.0.0.0:9090`           | `http://<WIFI_IP>:9090`                          |
+| **Grafana**            | `http://curio-grafana:3000`                      | `0.0.0.0:3002`           | `http://<WIFI_IP>:3002`                          |
+| **Redis** _(Catalog)_  | `redis:6379`                                     | `0.0.0.0:6379`           | `<WIFI_IP>:6379`                                 |
+| **Milvus** _(Catalog)_ | `milvus-standalone:19530`                        | `0.0.0.0:19530` / `9091` | Distributed vector database                      |
+| **Attu** _(Catalog)_   | `http://attu:3000`                               | `0.0.0.0:3000`           | `http://<WIFI_IP>:3000`                          |
+
+> **Note on Wi-Fi / LAN Access (`0.0.0.0`):**
+> All services explicitly bind to `0.0.0.0`, exposing them to your local Wi-Fi / LAN network. You can reach any service from another laptop, phone, or tablet on the same Wi-Fi network using your host machine's Wi-Fi IP (e.g. `http://192.168.1.5:3002` for Grafana).
 
 ---
 
@@ -431,6 +434,21 @@ Understand the two network contexts:
 - **Running directly on Windows / Host (e.g., `uv run pytest`, IDE debugger):**
   Use `localhost` or `127.0.0.1`:
   `postgresql://curio:curio@localhost:5432/curio_db`
+- **Connecting from another machine / device over the Wi-Fi network:**
+  Use your host machine's Wi-Fi IPv4 address (e.g., `192.168.1.5`):
+  `postgresql://curio:curio@192.168.1.5:5432/curio_db`
+  `http://192.168.1.5:3002` (Grafana)
+  `http://192.168.1.5:11434` (Ollama)
+
+> [!TIP]
+> **Windows Firewall Configuration for Wi-Fi Access:**
+> If other devices on the Wi-Fi network cannot connect to your ports, Windows Defender Firewall might be blocking incoming traffic because your Wi-Fi network category is set to `Public`.
+> In an elevated PowerShell prompt, set the network profile to `Private`:
+>
+> ```powershell
+> Get-NetConnectionProfile
+> Set-NetConnectionProfile -Name "<Your_WiFi_Network_Name>" -NetworkCategory Private
+> ```
 
 ---
 

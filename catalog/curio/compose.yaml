@@ -12,8 +12,9 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
+      - "--web.listen-address=0.0.0.0:9090"
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "0.0.0.0:${PROMETHEUS_PORT:-9090}:9090"
     networks:
       shared-infra-net:
         aliases:
@@ -34,7 +35,7 @@ services:
       - ./configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - curio_grafana_data:/var/lib/grafana
     ports:
-      - "${GRAFANA_PORT:-3002}:3000"
+      - "0.0.0.0:${GRAFANA_PORT:-3002}:3000"
     depends_on:
       - prometheus
     networks:

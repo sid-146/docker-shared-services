@@ -9,7 +9,7 @@ services:
     # environment:
     #   - KEY=VALUE
     # ports:
-    #   - "HOST_PORT:CONTAINER_PORT"
+    #   - "0.0.0.0:HOST_PORT:CONTAINER_PORT"
     volumes:
       - SERVICE_NAME_data:/data
     networks:
