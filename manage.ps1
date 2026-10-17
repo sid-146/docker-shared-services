@@ -25,6 +25,11 @@ $RegistryPath = Join-Path $ScriptDir "projects.json"
 $EnvPath = Join-Path $ScriptDir ".env"
 $ComposePath = Join-Path $ScriptDir "compose.yaml"
 
+if (-not (Test-Path $EnvPath) -and (Test-Path (Join-Path $ScriptDir ".env.example"))) {
+    Copy-Item (Join-Path $ScriptDir ".env.example") $EnvPath
+    Write-Host "[Info] Initialized .env from .env.example" -ForegroundColor Yellow
+}
+
 function Get-Registry {
     if (-not (Test-Path $RegistryPath)) {
         @{
