@@ -32,6 +32,18 @@ case "$command" in
     add-service)
         powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" add-service "$name"
     ;;
+    start-service)
+        powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" start-service "$name" "${@:3}"
+    ;;
+    stop-service)
+        powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" stop-service "$name" "${@:3}"
+    ;;
+    restart-service)
+        powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" restart-service "$name"
+    ;;
+    logs)
+        powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" logs "$name"
+    ;;
     *)
         powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/manage.ps1" help
     ;;

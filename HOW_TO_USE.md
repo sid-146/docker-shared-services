@@ -47,16 +47,20 @@ Running 3 or 4 separate projects usually means:
 
 All orchestration is handled through `manage.ps1` (PowerShell on Windows) or `manage.sh` (Bash / WSL / macOS / Linux).
 
-| Command           | Syntax                                  | Description                                                                   |
-| :---------------- | :-------------------------------------- | :---------------------------------------------------------------------------- |
-| **Status**        | `.\manage.ps1 status`                   | Shows active projects, required services union, and running container health. |
-| **List Projects** | `.\manage.ps1 list-projects`            | Lists all registered projects, their assigned services, and active status.    |
-| **Start Project** | `.\manage.ps1 start-project <name>`     | Activates a project and reconciles containers (starts newly needed services). |
-| **Stop Project**  | `.\manage.ps1 stop-project <name>`      | Deactivates a project and stops services no longer required by any project.   |
-| **Stop All**      | `.\manage.ps1 stop-all`                 | Immediately deactivates all projects and stops all shared containers.         |
-| **Sync**          | `.\manage.ps1 sync`                     | Re-evaluates active projects in `projects.json` and enforces container state. |
-| **Provision**     | `.\manage.ps1 provision-project <name>` | Automatically creates PostgreSQL DB/user, MinIO bucket, and `.env.<name>`.    |
-| **Add Service**   | `.\manage.ps1 add-service <name>`       | Enables a plug-and-play service from `catalog/` into the master stack.        |
+| Command               | Syntax                                      | Description                                                                   |
+| :-------------------- | :------------------------------------------ | :---------------------------------------------------------------------------- |
+| **Status**            | `.\manage.ps1 status`                       | Shows active projects, standalone services, and container health.             |
+| **List Projects**     | `.\manage.ps1 list-projects`                | Lists all registered projects, their assigned services, and active status.    |
+| **Start Project**     | `.\manage.ps1 start-project <name>`         | Activates a project and reconciles containers (starts newly needed services). |
+| **Stop Project**      | `.\manage.ps1 stop-project <name>`          | Deactivates a project and stops services no longer required by any project.   |
+| **Start Service**     | `.\manage.ps1 start-service <name>`         | Starts a specific standalone service (e.g. `redis`, `postgres`, `ollama`).     |
+| **Stop Service**      | `.\manage.ps1 stop-service <name> [-Force]` | Safely stops a specific service (blocks if active projects depend on it).    |
+| **Restart Service**   | `.\manage.ps1 restart-service <name>`       | Restarts a specific service container.                                       |
+| **Logs**              | `.\manage.ps1 logs [service]`               | Streams logs for a specific service or all running containers.               |
+| **Stop All**          | `.\manage.ps1 stop-all`                     | Immediately deactivates all projects/services and stops all containers.      |
+| **Sync**              | `.\manage.ps1 sync`                         | Enforces container state based on active projects and standalone services.    |
+| **Provision**         | `.\manage.ps1 provision-project <name>`     | Automatically creates PostgreSQL DB/user, MinIO bucket, and `.env.<name>`.    |
+| **Add Service**       | `.\manage.ps1 add-service <name>`           | Enables a plug-and-play service from `catalog/` into the master stack.        |
 
 > **Linux / WSL / Git Bash:** Replace `.\manage.ps1 <cmd>` with `./manage.sh <cmd>`.
 

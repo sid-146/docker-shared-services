@@ -63,6 +63,18 @@ powershell -ExecutionPolicy Bypass -File .\manage.ps1 start-project <project-nam
 # Deactivate a project (stops idle services not needed by other projects)
 powershell -ExecutionPolicy Bypass -File .\manage.ps1 stop-project <project-name>
 
+# Start a specific standalone service (e.g. postgres, redis, ollama)
+powershell -ExecutionPolicy Bypass -File .\manage.ps1 start-service <service-name>
+
+# Safely stop a specific service (blocks if active projects depend on it; pass -Force to override)
+powershell -ExecutionPolicy Bypass -File .\manage.ps1 stop-service <service-name>
+
+# Restart a specific service
+powershell -ExecutionPolicy Bypass -File .\manage.ps1 restart-service <service-name>
+
+# Follow logs for a service or all services
+powershell -ExecutionPolicy Bypass -File .\manage.ps1 logs <service-name>
+
 # Enforce desired state according to projects.json
 powershell -ExecutionPolicy Bypass -File .\manage.ps1 sync
 

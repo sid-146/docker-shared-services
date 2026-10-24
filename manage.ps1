@@ -9,7 +9,7 @@
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("start-project", "stop-project", "register-project", "list-projects", "status", "sync", "stop-all", "add-service", "provision-project", "help")]
+    [ValidateSet("start-project", "stop-project", "register-project", "list-projects", "status", "sync", "stop-all", "add-service", "provision-project", "start-service", "stop-service", "restart-service", "logs", "help")]
     [string]$Command = "status",
 
     [Parameter(Position=1)]
@@ -33,12 +33,17 @@ if (-not (Test-Path $EnvPath) -and (Test-Path (Join-Path $ScriptDir ".env.exampl
 function Get-Registry {
     if (-not (Test-Path $RegistryPath)) {
         @{
-            available_services = @("postgres", "litellm", "ollama", "minio", "qdrant", "langfuse")
+            available_services = @("postgres", "litellm", "ollama", "minio", "qdrant", "langfuse", "redis", "prometheus", "grafana")
             projects = @{}
             active_projects = @()
+            standalone_services = @()
         } | ConvertTo-Json -Depth 10 | Set-Content $RegistryPath
     }
-    return Get-Content $RegistryPath -Raw | ConvertFrom-Json
+    $reg = Get-Content $RegistryPath -Raw | ConvertFrom-Json
+    if (-not $reg.standalone_services) {
+        $reg | Add-Member -MemberType NoteProperty -Name "standalone_services" -Value @() -Force
+    }
+    return $reg
 }
 
 function Save-Registry($registry) {
@@ -55,12 +60,17 @@ function Get-UnionOfActiveServices($registry) {
             }
         }
     }
+    if ($registry.standalone_services) {
+        foreach ($svc in $registry.standalone_services) {
+            [void]$services.Add($svc)
+        }
+    }
     return @($services)
 }
 
 function Reconcile-Containers($requiredServices) {
     if ($requiredServices.Count -eq 0) {
-        Write-Host "`n[Orchestrator] No projects are active. Stopping all shared services..." -ForegroundColor Yellow
+        Write-Host "`n[Orchestrator] No active projects or standalone services. Stopping all shared services..." -ForegroundColor Yellow
         docker compose stop
         return
     }
@@ -143,8 +153,9 @@ switch ($Command) {
     "stop-all" {
         $reg = Get-Registry
         $reg.active_projects = @()
+        $reg.standalone_services = @()
         Save-Registry $reg
-        Write-Host "Deactivated all projects and stopping all shared services..." -ForegroundColor Yellow
+        Write-Host "Deactivated all projects and standalone services, stopping all shared containers..." -ForegroundColor Yellow
         docker compose stop
         Write-Host "All shared services stopped." -ForegroundColor Green
     }
@@ -195,6 +206,13 @@ switch ($Command) {
             Write-Host "None (Idle)" -ForegroundColor Gray
         } else {
             Write-Host ($reg.active_projects -join ", ") -ForegroundColor Green
+        }
+
+        Write-Host "Standalone Services: " -NoNewline
+        if (-not $reg.standalone_services -or $reg.standalone_services.Count -eq 0) {
+            Write-Host "None" -ForegroundColor Gray
+        } else {
+            Write-Host ($reg.standalone_services -join ", ") -ForegroundColor Green
         }
 
         $union = Get-UnionOfActiveServices $reg
@@ -339,20 +357,115 @@ LANGFUSE_HOST=http://langfuse:3000
         Write-Host "Copy this file into your client project folder as '.env' and attach your project compose to 'shared-infra-net'!" -ForegroundColor Yellow
     }
 
+    "start-service" {
+        if (-not $Name) {
+            Write-Error "Please specify the service name. Example: .\manage.ps1 start-service redis"
+        }
+        $reg = Get-Registry
+        $avail = @($reg.available_services | ForEach-Object { [string]$_ })
+        if (-not ($avail -contains $Name)) {
+            $catalogPath = Join-Path $ScriptDir "catalog\$Name\compose.yaml"
+            if (Test-Path $catalogPath) {
+                Write-Host "Service '$Name' found in catalog. Adding service to master stack..." -ForegroundColor Yellow
+                & $MyInvocation.MyCommand.Path add-service $Name
+                $reg = Get-Registry
+            } else {
+                Write-Warning "Service '$Name' is not in available_services. Attempting to start profile '$Name'..."
+            }
+        }
+
+        $standalone = @($reg.standalone_services | ForEach-Object { [string]$_ })
+        if (-not ($standalone -contains $Name)) {
+            $reg.standalone_services = @($standalone + $Name)
+            Save-Registry $reg
+        }
+
+        Write-Host "Activated standalone service '$Name'." -ForegroundColor Green
+        $union = Get-UnionOfActiveServices $reg
+        Reconcile-Containers $union
+    }
+
+    "stop-service" {
+        if (-not $Name) {
+            Write-Error "Please specify the service name to stop. Example: .\manage.ps1 stop-service redis"
+        }
+        $reg = Get-Registry
+        $force = $false
+        if ($ExtraArgs -and ($ExtraArgs -contains "-Force" -or $ExtraArgs -contains "--force" -or $ExtraArgs -contains "-f")) {
+            $force = $true
+        }
+
+        # Check if any active project requires this service
+        $dependentProjects = @()
+        foreach ($proj in $reg.active_projects) {
+            $projName = [string]$proj
+            if ($reg.projects.$projName -and ($reg.projects.$projName -contains $Name)) {
+                $dependentProjects += $projName
+            }
+        }
+
+        if ($dependentProjects.Count -gt 0 -and -not $force) {
+            Write-Error "Cannot stop service '$Name' because active project(s) depend on it: ($($dependentProjects -join ', ')).`nTo stop anyway, pass -Force, or stop the project(s) first: .\manage.ps1 stop-project $($dependentProjects[0])"
+        }
+
+        $standalone = @($reg.standalone_services | ForEach-Object { [string]$_ })
+        if ($standalone -contains $Name) {
+            $reg.standalone_services = @($standalone | Where-Object { $_ -ne $Name })
+            Save-Registry $reg
+            Write-Host "Deactivated standalone service '$Name'." -ForegroundColor Yellow
+        } else {
+            Write-Host "Service '$Name' was not registered as a standalone active service." -ForegroundColor Gray
+        }
+
+        if ($dependentProjects.Count -gt 0 -and $force) {
+            Write-Warning "Force-stopping container '$Name'. Active projects ($($dependentProjects -join ', ')) may experience connection failures!"
+            docker compose stop $Name
+        } else {
+            $union = Get-UnionOfActiveServices $reg
+            Reconcile-Containers $union
+        }
+    }
+
+    "restart-service" {
+        if (-not $Name) {
+            Write-Error "Please specify the service name to restart. Example: .\manage.ps1 restart-service postgres"
+        }
+        Write-Host "Restarting service '$Name'..." -ForegroundColor Cyan
+        docker compose restart $Name
+    }
+
+    "logs" {
+        if (-not $Name) {
+            Write-Host "Streaming logs for all running services (Ctrl+C to exit)..." -ForegroundColor Cyan
+            docker compose logs --tail=100 -f
+        } else {
+            Write-Host "Streaming logs for service '$Name' (Ctrl+C to exit)..." -ForegroundColor Cyan
+            docker compose logs --tail=100 -f $Name
+        }
+    }
+
     default {
         Write-Host @"
 Local Shared Cloud Management CLI
 
-Commands:
+Project Commands:
   .\manage.ps1 start-project <name>         Activate project & start the union of all active services
   .\manage.ps1 stop-project <name>          Deactivate project & stop any services no longer needed
-  .\manage.ps1 stop-all                     Deactivate all projects and stop all containers
-  .\manage.ps1 status                       Show active projects, calculated service union, and container status
   .\manage.ps1 list-projects                List all registered projects and dependencies
   .\manage.ps1 register-project -Name <n>   Register a new project with its service list
   .\manage.ps1 provision-project -Name <n>  Auto-generate isolated DB, MinIO bucket, and client .env
+
+Service Commands:
+  .\manage.ps1 start-service <name>         Start a specific service (e.g. postgres, redis, ollama)
+  .\manage.ps1 stop-service <name> [-Force] Stop a specific service (safely checks project dependencies)
+  .\manage.ps1 restart-service <name>       Restart a specific service container
+  .\manage.ps1 logs [service]               Follow logs for a specific service or all services
   .\manage.ps1 add-service <name>           Add a pre-configured service from catalog (e.g. redis, milvus)
-  .\manage.ps1 sync                         Reconcile running containers with currently active projects
+
+Global Commands:
+  .\manage.ps1 status                       Show active projects, standalone services, and container health
+  .\manage.ps1 sync                         Reconcile running containers with active projects & services
+  .\manage.ps1 stop-all                     Deactivate all projects & services and stop all containers
 "@
     }
 }
